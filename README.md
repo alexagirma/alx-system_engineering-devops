@@ -1,2 +1,2 @@
 #!/bin/bash
-echo $(pwd -p)
+echo $(pwd -P)
