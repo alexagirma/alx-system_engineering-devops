@@ -1,34 +1,37 @@
-# redirect me and nginx
-exec {'apt-get-update':
+# Install Nginx web server with Puppet
+include stdlib
+
+$link = 'https://www.youtube.com/watch?v=QH2-TGUlwu4'
+$content = "\trewrite ^/redirect_me/$ ${link} permanent;"
+
+exec { 'update packages':
   command => '/usr/bin/apt-get update'
 }
 
-package {'apache2.2-common':
-  ensure  => 'absent',
-  require => Exec['apt-get-update']
+exec { 'restart nginx':
+  command => '/usr/sbin/service nginx restart',
+  require => Package['nginx']
 }
 
 package { 'nginx':
   ensure  => 'installed',
-  require => Package['apache2.2-common']
+  require => Exec['update packages']
 }
 
-service {'nginx':
-  ensure  =>  'running',
-  require => file_line['perform a redirection'],
-}
-
-file { '/var/www/html/index.nginx-debian.html':
+file { '/var/www/html/index.html':
   ensure  => 'present',
-  content => 'Hello World!',
-  require =>  Package['nginx']
+  content => 'Holberton School',
+  mode    => '0644',
+  owner   => 'root',
+  group   => 'root'
 }
 
-file_line { 'perform a redirection':
-  ensure  => 'present',
-  path    => '/etc/nginx/sites-enabled/default',
-  line    => 'rewrite ^/redirect_me/$ https://www.youtube.com/watch?v=QH2-TGUlwu4 permanent;',
-  after   => 'root /var/www/html;',
-  require => Package['nginx'],
-  notify  => Service['nginx'],
+file_line { 'Set 301 redirection':
+  ensure   => 'present',
+  after    => 'server_name\ _;',
+  path     => '/etc/nginx/sites-available/default',
+  multiple => true,
+  line     => $content,
+  notify   => Exec['restart nginx'],
+  require  => File['/var/www/html/index.html']
 }
